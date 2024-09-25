@@ -1,0 +1,8 @@
+ffmpeg_encoder:
+  ros__parameters:
+    ffmpeg_image_transport:
+      qmax: 24
+      preset: ultrafast
+      tune: zerolatency
+      bit_rate: 800000
+      gop_size: 6
