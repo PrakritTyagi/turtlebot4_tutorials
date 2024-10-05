@@ -21,42 +21,17 @@ from launch.actions.declare_launch_argument import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-
 def generate_launch_description():
-    namespaces = ['tb21', 'tb10']
-    # namespaces = LaunchConfiguration('namespaces')
-
-    # arg_namespaces = DeclareLaunchArgument(
-    #     'namespaces',
-    #     default_value='[tb10, tb11]')
-
-    ffmpeg_nodes = []
-
-    for i, ns in enumerate(namespaces):
-        ffmpeg_nodes.append(
-            Node(
-                package='image_transport',
-                executable='republish',
-                name=f'ffmpeg_decoder{i}',
-                remappings=[
-                    ('in/ffmpeg', f'/{ns}/oakd/rgb/preview/encoded/ffmpeg'),
-                    ('out', f'/{ns}/oakd/rgb/preview/ffmpeg_decoded')],
-                arguments=['ffmpeg', 'raw'],
-            )
-        )
+    namespaces = ['tb11', 'tb12', 'tb13', 'tb14', 'tb15',]
 
     display_node = Node(
-        package='turtlebot4_vision_tutorials',
+        package='turtlebot4_vision_tutorials_cpp',
         executable='pose_display',
         name='pose_display',
         parameters=[{'namespaces': namespaces}],
-
     )
 
     ld = LaunchDescription()
-    # ld.add_action(arg_namespaces)
-    for n in ffmpeg_nodes:
-        ld.add_action(n)
     ld.add_action(display_node)
 
     return ld
