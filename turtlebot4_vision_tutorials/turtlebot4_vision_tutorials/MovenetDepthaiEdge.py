@@ -1,3 +1,30 @@
+# Source: https://github.com/geaxgx/depthai_movenet/
+# Adapted by: Hilary Luo (hluo@clearpathrobotics.com)
+
+# Original source license:
+
+# MIT License
+
+# Copyright (c) [2021] [geax]
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 from collections import namedtuple
 from math import gcd
 import numpy as np
@@ -7,8 +34,6 @@ from string import Template
 
 import depthai as dai
 import marshal
-
-from turtlebot4_vision_tutorials.FPS import FPS
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -138,7 +163,6 @@ class MovenetDepthai:
     - internal_frame_height : when using the internal color camera, set the frame height
                               (calling setIspScale()). The width is calculated accordingly to
                               height and depends on value of 'crop'
-    - stats : True or False, when True, display the global FPS when exiting.
     """
     def __init__(self,
                  input_src="rgb",
@@ -147,8 +171,7 @@ class MovenetDepthai:
                  crop=False,
                  smart_crop=True,
                  internal_fps=None,
-                 internal_frame_height=640,
-                 stats=True):
+                 internal_frame_height=640):
 
         self.model = model
 
@@ -166,14 +189,12 @@ class MovenetDepthai:
                 self.pd_input_length = 256
         print(f"Using blob file : {self.model}")
 
-        print(f"MoveNet imput size : {self.pd_input_length}x{self.pd_input_length}x3")
+        print(f"MoveNet input size : {self.pd_input_length}x{self.pd_input_length}x3")
 
         self.score_thresh = score_thresh
-
         self.crop = crop
         self.smart_crop = smart_crop
         self.internal_fps = internal_fps
-        self.stats = stats
 
         if input_src is None or input_src == "rgb" or input_src == "rgb_laconic":
             self.input_type = "rgb"  # OAK* internal color camera
@@ -223,15 +244,8 @@ class MovenetDepthai:
         if not self.laconic:
             self.q_video = self.device.getOutputQueue(name="cam_out", maxSize=1, blocking=False)
         self.q_processing_out = self.device.getOutputQueue(name="processing_out",
-                                                           maxSize=4,
+                                                           maxSize=1,
                                                            blocking=False)
-        # For debugging
-        # self.q_manip_out=self.device.getOutputQueue(name="manip_out", maxSize=1, blocking=False)
-
-        self.fps = FPS()
-
-        self.nb_frames = 0
-        self.nb_pd_inferences = 0
 
     def create_pipeline(self):
         print("Creating pipeline...")
@@ -349,14 +363,11 @@ class MovenetDepthai:
         return body
 
     def next_frame(self):
-        self.fps.update()
-
         # Get the device camera frame if wanted
         if self.laconic:
             frame = np.zeros((self.frame_size, self.frame_size, 3), dtype=np.uint8)
         else:
-            in_video = self.q_video.get()
-            frame = in_video.getCvFrame()
+            frame = self.q_video.get().getCvFrame()
 
         # For debugging
         # manip = self.q_manip_out.get().getCvFrame()
@@ -367,16 +378,4 @@ class MovenetDepthai:
         body = self.pd_postprocess(inference)
         self.crop_region = body.next_crop_region
 
-        size = (in_video.getWidth(), in_video.getHeight())
-
-        # Statistics
-        if self.stats:
-            self.nb_frames += 1
-            self.nb_pd_inferences += 1
-
-        return frame, body, size
-
-    def exit(self):
-        # Print some stats
-        if self.stats:
-            print(f"FPS: {self.fps.global_duration():.1f} f/s (# frames = {self.fps.nb_frames()})")
+        return frame, body

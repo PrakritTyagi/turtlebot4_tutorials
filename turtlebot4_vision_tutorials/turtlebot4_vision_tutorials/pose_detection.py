@@ -30,10 +30,12 @@ from sensor_msgs.msg import Image
 from irobot_create_msgs.msg import LightringLeds
 from turtlebot4_vision_tutorials.MovenetDepthaiEdge import MovenetDepthai
 
-POSE_DETECT_ENABLE = True
+SCORE_THRESH = 0.4
+SMART_CROP = True
+FRAME_HEIGHT = 432
 
 # keys:
-#   (right, left) where each value is the angle with the horiziontal
+#   (right, left) where each value is the angle with the horizontal
 #   quantized into 8 regions
 #   Human facing camera
 #
@@ -120,20 +122,12 @@ class Dir(Enum):
 
 
 class PoseDetection(Node):
-    lights_blue_ = False
 
     def __init__(self):
         super().__init__('pose_detection')
 
         self.dir = Dir.STOP
         self.dir_confirm = 0
-
-        # # Subscribe to the /interface_buttons topic
-        # self.interface_buttons_subscriber = self.create_subscription(
-        #     InterfaceButtons,
-        #     '/interface_buttons',
-        #     self.interface_buttons_callback,
-        #     qos_profile_sensor_data)
 
         # Create a publisher for the /cmd_lightring topic
         self.lightring_publisher = self.create_publisher(
@@ -164,6 +158,7 @@ class PoseDetection(Node):
         )
 
         self.is_paused_ = False
+        self.lights_blue_ = False
 
         self.start_camera_srv = self.create_service(
             Trigger,
@@ -182,35 +177,25 @@ class PoseDetection(Node):
 
         self.pose = MovenetDepthai(input_src='rgb',
                                    model='thunder',
-                                   score_thresh=0.3,
-                                   crop=not 'store_true',
-                                   smart_crop=not 'store_true',
-                                   internal_frame_height=432)
+                                   score_thresh=SCORE_THRESH,
+                                   crop=False,
+                                   smart_crop=SMART_CROP,
+                                   internal_frame_height=FRAME_HEIGHT)
 
         self.bridge = CvBridge()
 
-    # # Interface buttons subscription callback
-    # def interface_buttons_callback(self, create3_buttons_msg: InterfaceButtons):
-    #     # Button 1 is pressed
-    #     if create3_buttons_msg.button_1.is_pressed:
-    #         self.get_logger().info('Button 1 Pressed!')
-    #         self.button_1_function()
 
     def pose_detect(self):
         if self.is_paused_:
             return
 
-        if not (POSE_DETECT_ENABLE):
-            return
         # Run movenet on next frame
-        frame, body, size = self.pose.next_frame()
+        frame, body = self.pose.next_frame()
         if frame is None:
             return
-        image_msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
+        image_msg = self.bridge.cv2_to_imgmsg(frame, 'passthrough')
         image_msg.header.stamp = self.get_clock().now().to_msg()
         image_msg.header.frame_id = 'oakd_rgb_camera_optical_frame'
-        image_msg.width = size[0]
-        image_msg.height = size[1]
         image_msg.encoding = 'bgr8'
         self.camera_publisher.publish(image_msg)
 
@@ -228,11 +213,8 @@ class PoseDetection(Node):
         # Gesture recognition
         letter = self.recognize_gesture(body)
         if letter:
-            # cv2.putText(frame, letter, (frame.shape[1] // 2, 100),
-            # cv2.FONT_HERSHEY_PLAIN, 5, (0,190,255), 3)
             # Create a ROS2 message
             flag_msg = string_msg()
-            # Stamp the message with the current time
             flag_msg.data = letter
             self.semaphore_flag_publisher.publish(flag_msg)
             self.get_logger().info(f'Letter detected is: {letter}')
@@ -279,7 +261,7 @@ class PoseDetection(Node):
             self.dir_confirm = 1
             self.dir = dir_temp
 
-        self.lights_blue_ = self.dir != Dir.STOP
+        self.lights_blue_ = (self.dir != Dir.STOP)
 
         if self.dir_confirm >= 3:
             cmd_vel_msg = Twist()
@@ -300,46 +282,17 @@ class PoseDetection(Node):
         # Stamp the message with the current time
         lightring_msg.header.stamp = self.get_clock().now().to_msg()
 
-        # Lights are currently off
         if self.lights_blue_:
             # Override system lights
             lightring_msg.override_system = True
 
-            # LED 0
-            lightring_msg.leds[0].red = 0
-            lightring_msg.leds[0].blue = 255
-            lightring_msg.leds[0].green = 0
+            for i in range(6):
+                lightring_msg.leds[i].red = 0
+                lightring_msg.leds[i].blue = 255
+                lightring_msg.leds[i].green = 0
 
-            # LED 1
-            lightring_msg.leds[1].red = 0
-            lightring_msg.leds[1].blue = 255
-            lightring_msg.leds[1].green = 0
+            self.lights_blue_ = False
 
-            # LED 2
-            lightring_msg.leds[2].red = 0
-            lightring_msg.leds[2].blue = 255
-            lightring_msg.leds[2].green = 0
-
-            # LED 3
-            lightring_msg.leds[3].red = 0
-            lightring_msg.leds[3].blue = 255
-            lightring_msg.leds[3].green = 0
-
-            # LED 4
-            lightring_msg.leds[4].red = 0
-            lightring_msg.leds[4].blue = 255
-            lightring_msg.leds[4].green = 0
-
-            # LED 5
-            lightring_msg.leds[5].red = 0
-            lightring_msg.leds[5].blue = 255
-            lightring_msg.leds[5].green = 0
-
-            # Toggle the lights on status
-            self.lights_blue_ = not self.lights_blue_
-            # self.get_logger().info('Lights set to blue')
-
-        # Lights are currently on
         else:
             # Disable system override. The system will take back control of the lightring.
             lightring_msg.override_system = False
@@ -353,10 +306,10 @@ class PoseDetection(Node):
             self.lights_blue_ = False
             self.pose = MovenetDepthai(input_src='rgb',
                                        model='thunder',
-                                       score_thresh=0.3,
-                                       crop=not 'store_true',
-                                       smart_crop=not 'store_true',
-                                       internal_frame_height=432)
+                                       score_thresh=SCORE_THRESH,
+                                       crop=False,
+                                       smart_crop=SMART_CROP,
+                                       internal_frame_height=FRAME_HEIGHT)
             resp.success = True
         else:
             resp.message = 'Device already running'

@@ -29,22 +29,6 @@ def generate_launch_description():
         'namespace',
         default_value='')
 
-    parameters = {
-        "/cpr_donatello/ffmpeg_decoder": {
-            "ros__parameters": {
-                "qos_overrides": {
-                    "/cpr_donatello/oakd/rgb/preview/encoded/ffmpeg": {
-                        "subscriber": {
-                            "reliability": "best_effort",
-                            "depth": 10,
-                            "history": "keep_last"
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     ffmpeg_node = Node(
         package='image_transport',
         executable='republish',
@@ -55,7 +39,6 @@ def generate_launch_description():
             ('out', "oakd/rgb/preview/ffmpeg_decoded"),
             ],
         arguments=['ffmpeg', 'raw'],
-        parameters=[parameters],
     )
 
     ld = LaunchDescription()

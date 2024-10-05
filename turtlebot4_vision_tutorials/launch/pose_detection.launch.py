@@ -16,7 +16,6 @@
 #
 # @author Hilary Luo (hluo@clearpathrobotics.com)
 
-# from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions.declare_launch_argument import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
@@ -25,38 +24,20 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
-    # ffmpeg_param_file = LaunchConfiguration('ffmpeg_param_file')
-
-    # turtlebot4_vision_tutorials = get_package_share_directory('turtlebot4_vision_tutorials')
-
-    # arg_parameters = DeclareLaunchArgument(
-    #     'ffmpeg_param_file',
-    #     default_value=PathJoinSubstitution(
-    #         [turtlebot4_vision_tutorials, 'config', 'ffmpeg.yaml']),
-    #     description='Turtlebot4 ffmpeg compression param file'
-    # )
 
     arg_namespace = DeclareLaunchArgument(
         'namespace',
         default_value='')
 
-    # parameters = RewrittenYaml(
-    #     source_file=ffmpeg_param_file,
-    #     root_key=namespace,
-    #     param_rewrites={},
-    #     convert_types=True)
-
-    ffmpeg_node = Node(
+    pose_node = Node(
         package='turtlebot4_vision_tutorials',
         executable='pose_detection',
         namespace=namespace,
         name='pose_detection',
-        # parameters=[parameters],
     )
 
     ld = LaunchDescription()
-    # ld.add_action(arg_parameters)
     ld.add_action(arg_namespace)
-    ld.add_action(ffmpeg_node)
+    ld.add_action(pose_node)
 
     return ld
