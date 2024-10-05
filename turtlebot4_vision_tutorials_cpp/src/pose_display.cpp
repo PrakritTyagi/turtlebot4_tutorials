@@ -27,16 +27,18 @@
 #include "sensor_msgs/msg/battery_state.hpp"
 #include "sensor_msgs/msg/image.hpp"
 
+// Constants
 #define IMAGE_HEIGHT 432
 #define IMAGE_WIDTH 768
 #define TILE_X 2
 #define TILE_Y 3
-
-#define SCORE_THRESH 0.4
 #define LINE_NUM 16
 
 #define NODE_NAME "pose_display"
 #define WINDOW_NAME "Clearpath Turtlebot 4 Demo"
+
+// Settings
+#define SCORE_THRESH 0.4
 #define DISPLAY_PERIOD 83 //ms; 12 fps
 
 const int max_num_streams = TILE_X * TILE_Y;
@@ -57,6 +59,7 @@ void imageCallback(uint num, std::string ns, const sensor_msgs::msg::Image::Cons
     const int x = (num % TILE_X) * IMAGE_WIDTH;
     const int y = (num / TILE_X) * IMAGE_HEIGHT;
     frame.copyTo(full_frame(cv::Rect(x, y, IMAGE_WIDTH, IMAGE_HEIGHT)));
+
     cv::putText(full_frame, ns, cv::Point(x + 50, y + 50),
                 cv::FONT_HERSHEY_PLAIN, 2, cv::Scalar(0, 0, 255), 2);
     if (batt_perc[num])
@@ -88,6 +91,9 @@ void imageCallback(uint num, std::string ns, const sensor_msgs::msg::Image::Cons
         }
       }
     }
+
+    cv::rectangle(full_frame, cv::Rect(x, y, IMAGE_WIDTH, IMAGE_HEIGHT),
+                  cv::Scalar(150, 150, 150), 2, cv::LINE_AA);
   } 
   catch(const std::exception& e)
   {
@@ -154,12 +160,25 @@ int main(int argc, char ** argv)
   rclcpp::Subscription<geometry_msgs::msg::PoseArray>::SharedPtr body_sub[max_num_streams];
   rclcpp::Subscription<sensor_msgs::msg::BatteryState>::SharedPtr battery_sub[max_num_streams];
 
+  const rmw_qos_profile_t rmw_qos_profile_video =
+  {
+    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+    1,
+    RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
+    RMW_QOS_POLICY_DURABILITY_VOLATILE,
+    RMW_QOS_DEADLINE_DEFAULT,
+    RMW_QOS_LIFESPAN_DEFAULT,
+    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
+    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
+    false
+  };
+
   for (uint i=0; i < namespaces.size(); i++)
   {
     frame_sub[i] = image_transport::create_subscription(
       node.get(), "/"+ namespaces[i]+"/oakd/rgb/preview/encoded",
       [i, namespaces] (const sensor_msgs::msg::Image::ConstSharedPtr & msg) {imageCallback(i, namespaces[i], msg);},
-      "ffmpeg", rmw_qos_profile_sensor_data);
+      "ffmpeg", rmw_qos_profile_video);
 
     body_sub[i] = node->create_subscription<geometry_msgs::msg::PoseArray>(
       "/"+ namespaces[i]+"/body_pose",

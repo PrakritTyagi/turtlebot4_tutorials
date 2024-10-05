@@ -17,8 +17,6 @@
 # @author Hilary Luo (hluo@clearpathrobotics.com)
 
 from launch import LaunchDescription
-from launch.actions.declare_launch_argument import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 def generate_launch_description():

@@ -30,11 +30,15 @@ from sensor_msgs.msg import Image
 from irobot_create_msgs.msg import LightringLeds
 from turtlebot4_vision_tutorials.MovenetDepthaiEdge import MovenetDepthai
 
+
+# Settings
 SCORE_THRESH = 0.4
 SMART_CROP = True
-FRAME_HEIGHT = 432
+FRAME_HEIGHT = 432 # 1080 / 2.5
+PUBLISH_PERIOD = 0.0833  # seconds; 12 fps
 
-# keys:
+
+# Semaphore Alphabet Keys:
 #   (right, left) where each value is the angle with the horizontal
 #   quantized into 8 regions
 #   Human facing camera
@@ -172,8 +176,7 @@ class PoseDetection(Node):
             self.handle_stop_camera
         )
 
-        timer_period = 0.0833  # seconds
-        self.timer = self.create_timer(timer_period, self.pose_detect)
+        self.timer = self.create_timer(PUBLISH_PERIOD, self.pose_detect)
 
         self.pose = MovenetDepthai(input_src='rgb',
                                    model='thunder',
