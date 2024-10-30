@@ -4,14 +4,16 @@
   <name>turtlebot4_python_tutorials</name>
   <version>1.0.1</version>
   <description>TurtleBot 4 Python Tutorials</description>
-  <maintainer email="rkreinin@clearpathrobotics.com">rkreinin</maintainer>
+  <maintainer email="civerachb@clearpathrobotics.com">Chris Iverach-Brereton</maintainer>
+  <maintainer email="hluo@clearpathrobotics.com">Hilary Luo</maintainer>
+  <author email="rkreinin@clearpathrobotics.com">Roni Kreinin</author>
   <license>Apache 2.0</license>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
   <test_depend>ament_pep257</test_depend>
   <test_depend>python3-pytest</test_depend>
- 
+
   <depend>irobot_create_msgs</depend>
   <depend>rclpy</depend>
   <depend>turtlebot4_navigation</depend>
